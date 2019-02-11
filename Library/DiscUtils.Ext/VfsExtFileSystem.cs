@@ -40,6 +40,8 @@ namespace DiscUtils.Ext
         public VfsExtFileSystem(Stream stream, FileSystemParameters parameters)
             : base(new ExtFileSystemOptions(parameters))
         {
+            const int DefaultBlockGroupDescriptorSize = 32;
+
             stream.Position = 1024;
             byte[] superblockData = StreamUtilities.ReadExact(stream, 1024);
 
@@ -73,13 +75,13 @@ namespace DiscUtils.Ext
             long blockDescStart = (superblock.FirstDataBlock + 1) * (long)superblock.BlockSize;
 
             stream.Position = blockDescStart;
-            var bgDescSize = superblock.Has64Bit ? superblock.DescriptorSize : BlockGroup.DescriptorSize;
+            var bgDescSize = superblock.Has64Bit ? superblock.DescriptorSize : DefaultBlockGroupDescriptorSize;
             byte[] blockDescData = StreamUtilities.ReadExact(stream, (int)numGroups * bgDescSize);
 
             _blockGroups = new BlockGroup[numGroups];
             for (int i = 0; i < numGroups; ++i)
             {
-                BlockGroup bg = superblock.Has64Bit ? new BlockGroup64(bgDescSize) : new BlockGroup();
+                BlockGroup bg = new BlockGroup(bgDescSize);
                 bg.ReadFrom(blockDescData, i * bgDescSize);
                 _blockGroups[i] = bg;
             }
@@ -223,7 +225,7 @@ namespace DiscUtils.Ext
                 {
                     ulong free = 0;
                     //ext4 64Bit Feature
-                    foreach (BlockGroup64 blockGroup in _blockGroups)
+                    foreach (var blockGroup in _blockGroups)
                     {
                         free += (uint) (blockGroup.FreeBlocksCountHigh << 16 | blockGroup.FreeBlocksCount);
                     }

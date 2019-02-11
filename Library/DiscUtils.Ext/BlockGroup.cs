@@ -25,42 +25,9 @@ using DiscUtils.Streams;
 
 namespace DiscUtils.Ext
 {
-    internal class BlockGroup64 : BlockGroup
-    {
-        private int _descriptorSize;
-
-        public uint BlockBitmapBlockHigh;
-        public uint InodeBitmapBlockHigh;
-        public uint InodeTableBlockHigh;
-        public ushort FreeBlocksCountHigh;
-        public ushort FreeInodesCountHigh;
-        public ushort UsedDirsCountHigh;
-
-        public BlockGroup64(int descriptorSize)
-        {
-            this._descriptorSize = descriptorSize;
-        }
-
-        public override int Size { get { return this._descriptorSize; } }
-
-        public override int ReadFrom(byte[] buffer, int offset)
-        {
-            base.ReadFrom(buffer, offset);
-
-            BlockBitmapBlockHigh = EndianUtilities.ToUInt32LittleEndian(buffer, offset + 0x20);
-            InodeBitmapBlockHigh = EndianUtilities.ToUInt32LittleEndian(buffer, offset + 0x24);
-            InodeTableBlockHigh = EndianUtilities.ToUInt32LittleEndian(buffer, offset + 0x28);
-            FreeBlocksCountHigh = EndianUtilities.ToUInt16LittleEndian(buffer, offset + 0x2C);
-            FreeInodesCountHigh = EndianUtilities.ToUInt16LittleEndian(buffer, offset + 0x2E);
-            UsedDirsCountHigh = EndianUtilities.ToUInt16LittleEndian(buffer, offset + 0x30);
-
-            return this._descriptorSize;
-        }
-    }
-
     internal class BlockGroup : IByteArraySerializable
     {
-        public const int DescriptorSize = 32;
+        private readonly int _descriptorSize;
 
         public uint BlockBitmapBlock;
         public ushort FreeBlocksCount;
@@ -69,12 +36,21 @@ namespace DiscUtils.Ext
         public uint InodeTableBlock;
         public ushort UsedDirsCount;
 
-        public virtual int Size
+        public uint BlockBitmapBlockHigh;
+        public uint InodeBitmapBlockHigh;
+        public uint InodeTableBlockHigh;
+        public ushort FreeBlocksCountHigh;
+        public ushort FreeInodesCountHigh;
+        public ushort UsedDirsCountHigh;
+
+        public BlockGroup(int descriptorSize)
         {
-            get { return DescriptorSize; }
+            this._descriptorSize = descriptorSize;
         }
 
-        public virtual int ReadFrom(byte[] buffer, int offset)
+        public int Size { get { return this._descriptorSize; } }
+
+        public int ReadFrom(byte[] buffer, int offset)
         {
             BlockBitmapBlock = EndianUtilities.ToUInt32LittleEndian(buffer, offset + 0);
             InodeBitmapBlock = EndianUtilities.ToUInt32LittleEndian(buffer, offset + 4);
@@ -83,7 +59,17 @@ namespace DiscUtils.Ext
             FreeInodesCount = EndianUtilities.ToUInt16LittleEndian(buffer, offset + 14);
             UsedDirsCount = EndianUtilities.ToUInt16LittleEndian(buffer, offset + 16);
 
-            return DescriptorSize;
+            if (this._descriptorSize >= 64)
+            {
+                BlockBitmapBlockHigh = EndianUtilities.ToUInt32LittleEndian(buffer, offset + 0x20);
+                InodeBitmapBlockHigh = EndianUtilities.ToUInt32LittleEndian(buffer, offset + 0x24);
+                InodeTableBlockHigh = EndianUtilities.ToUInt32LittleEndian(buffer, offset + 0x28);
+                FreeBlocksCountHigh = EndianUtilities.ToUInt16LittleEndian(buffer, offset + 0x2C);
+                FreeInodesCountHigh = EndianUtilities.ToUInt16LittleEndian(buffer, offset + 0x2E);
+                UsedDirsCountHigh = EndianUtilities.ToUInt16LittleEndian(buffer, offset + 0x30);
+            }
+
+            return this._descriptorSize;
         }
 
         public void WriteTo(byte[] buffer, int offset)
